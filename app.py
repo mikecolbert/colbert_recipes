@@ -23,7 +23,8 @@ client = pymongo.MongoClient(mongo)
 db = client['recipe_app'] # Mongo collection
 users = db['users'] # Mongo document
 roles = db['roles'] # Mongo document
-
+categories = db['categories']
+recipes = db['recipes']
 
 login = LoginManager()
 login.init_app(app)
@@ -100,7 +101,6 @@ def login():
 
     if request.method == 'POST':
         user = users.find_one({"email": request.form['username']})
-        print(user['email'])
         if user and user['password'] == request.form['password']:
             user_obj = User(username=user['email'], role=user['role'], id=user['_id'])
             login_user(user_obj)
@@ -112,7 +112,7 @@ def login():
             flash("Logged in successfully!", category='success')
             return redirect(request.args.get("next") or url_for("index"))
 
-        flash("Wrong username or password!", category='error')
+        flash("Wrong username or password!", category='danger')
     return render_template('login.html')
 
 
@@ -153,7 +153,7 @@ def update_myaccount(user_id):
             'date_modified': datetime.datetime.now()
             })
         update_account = users.find_one({'_id': ObjectId(user_id)})
-        flash(update_account['email'] + ' has been modified.', 'success')
+        flash(update_account['email'] + ' has been updated.', 'success')
         return redirect(url_for('index'))
     return redirect(url_for('index'))
 
@@ -164,7 +164,7 @@ def update_myaccount(user_id):
 @login_required
 @roles_required('admin')
 def admin_users():
-    return render_template('users.html', all_roles=roles.find(), all_users=users.find())
+    return render_template('user-admin.html', all_roles=roles.find(), all_users=users.find())
 
 @app.route('/admin/add-user', methods=['GET', 'POST'])
 @login_required
@@ -191,7 +191,7 @@ def admin_add_user():
         users.insert_one(new_user)
         flash(new_user['email'] + ' user has been added.', 'success')
         return redirect(url_for('admin_users'))
-    return render_template('users.html', all_roles=roles.find(), all_users=users.find())
+    return render_template('user-admin.html', all_roles=roles.find(), all_users=users.find())
 
 @app.route('/admin/delete-user/<user_id>', methods=['GET', 'POST'])
 @login_required
@@ -235,19 +235,20 @@ def admin_update_user(user_id):
             'date_modified': datetime.datetime.now()
             })
         update_user = users.find_one({'_id': ObjectId(user_id)})
-        flash(update_user['email'] + ' has been added.', 'success')
+        flash(update_user['email'] + ' has been updated.', 'success')
         return redirect(url_for('admin_users'))
-    return render_template('users.html', all_roles=roles.find(), all_users=users.find())
+    return render_template('user-admin.html', all_roles=roles.find(), all_users=users.find())
 
 
 
 ##########  Recipes ##########
 
-@app.route('/recipes/new-recipe', methods=['GET'])
+@app.route('/recipes/recipes', methods=['GET', 'POST'])
 @login_required
-@roles_required('admin', 'contributor')
-def new_recipe():
-    return 'Retrieve new recipe page.'
+@roles_required('admin')
+def admin_recipes():
+    return render_template('recipe-admin.html', all_categories=categories.find(), all_recipes=recipes.find())
+
 
 @app.route('/recipes/add-recipe', methods=['POST'])
 @login_required
