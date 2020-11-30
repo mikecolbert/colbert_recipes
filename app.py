@@ -11,6 +11,19 @@ from functools import wraps
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 
+############ TO DO #############
+
+# fix it so contributors can edit and delete their own recipes, but admins can edit and delete everyone's recipes
+# add moment.js to clean up date added and date modified appearance in recipes and users
+# improve appearance of menu
+# ensure each role has access to appropriate menu choices
+# fix password so it hashes with bcrypt
+# fix print messages in functions so you can see what is happening on the server
+
+################################
+
+
+
 ## necessary for python-dotenv ##
 APP_ROOT = os.path.join(os.path.dirname(__file__), '..')   # refers to application_top
 dotenv_path = os.path.join(APP_ROOT, '.env')
@@ -92,6 +105,7 @@ def index():
     #timedelta = datetime.timedelta(1) #one day old
     #return render_template('index.html', all_recipes=recipes.find({"date_added": {"$gt": today - timedelta}}))
 
+    # unauthenticated users can see the 10 newest recipes in the database
     return render_template('index.html', all_recipes=recipes.find().sort([("_id", -1)]).limit(10)) #sort newest first, limit to 10 records returned
 
 @app.route('/search', methods=['GET', 'POST'])
@@ -106,15 +120,17 @@ def search():
     print("get request")
     return url_for("index")
 
-@app.route('/register')
+# unauthenticated users can view the about page
+@app.route('/about')
 def about():
     return 'about page'
 
+# unauthenticated users can see a message on the registration page
 @app.route('/register')
 def register():
-    return 'self register for an account'
+    return 'Contact the site administrator for an account.'
 
-
+# unauthenticated users can view the login page
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -136,14 +152,14 @@ def login():
         flash("Wrong username or password!", category='danger')
     return render_template('login.html')
 
-
+# authenticated users can logout
 @app.route('/logout', methods=['GET', 'POST'])
 def logout():
     logout_user()
     flash('You have successfully logged out.', 'success')
     return redirect(url_for('login'))
 
-
+# authenticated users can view their account details
 @app.route('/my-account/<user_id>', methods=['GET', 'POST'])
 @login_required
 @roles_required('user', 'contributor', 'admin')
@@ -154,6 +170,7 @@ def my_account(user_id):
     flash('User not found.', 'warning')
     return redirect(url_for('index'))
 
+# authenticated users can update their account details
 @app.route('/update-myaccount/<user_id>', methods=['GET', 'POST'])
 @login_required
 @roles_required('user', 'contributor', 'admin')
@@ -261,7 +278,7 @@ def admin_update_user(user_id):
     return render_template('user-admin.html', all_roles=roles.find(), all_users=users.find())
 
 
-##########  Recipe Categories ##########
+##########  Admin Functionality - Recipe Categories ##########
 
 @app.route('/recipes/add-category', methods=['POST'])
 @login_required
@@ -297,12 +314,14 @@ def delete_category(category_id):
 
 ##########  Recipes ##########
 
+# authenticated users can view al the recipes
 @app.route('/recipes', methods=['GET', 'POST'])
 @login_required
 @roles_required('admin', 'contributor', 'user')
 def view_recipes():
     return render_template('recipes.html', all_recipes=recipes.find())
 
+# authenticated users can print a recipe
 @app.route('/recipes/print-recipe/<recipe_id>', methods=['GET', 'POST'])
 @login_required
 @roles_required('admin', 'contributor', 'user')
@@ -313,12 +332,14 @@ def print_recipe(recipe_id):
     flash('Recipe not found.', 'danger')
     return redirect(url_for('view_recipes'))
 
+# administrators users can manage all recipes
 @app.route('/recipes/admin', methods=['GET', 'POST'])
 @login_required
 @roles_required('admin')
 def admin_recipes():
     return render_template('recipe-admin.html', all_categories=categories.find(), all_recipes=recipes.find())
 
+# administrators and contributors can add new recipes
 @app.route('/recipes/add-recipe', methods=['GET', 'POST'])
 @login_required
 @roles_required('admin', 'contributor')
@@ -375,6 +396,7 @@ def update_recipe(recipe_id):
         return redirect(url_for('view_recipes'))
     return render_template('edit-recipe.html', all_categories=categories.find())
 
+# administrators can delete recipes
 @app.route('/recipes/delete-recipe/<recipe_id>', methods=['POST'])
 @login_required
 @roles_required('admin')
