@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %} recipe_owner Administration {% endblock %}
+{% block title %} Recipe Administration {% endblock %}
 
 
 {% block body %} 
@@ -22,12 +22,10 @@
         <br clear="all">
     
 </div>
-<br clear="all"><br><br>
-
 <br clear="all">
 
 <h3>All Recipes</h3>
-<form method="get" action="/recipes/add-recipe">
+<form method="GET" action="{{ url_for('add_recipe') }}">
     <button type="submit" class="btn btn-info">Add a new recipe</button>
 </form>
 
