@@ -5,11 +5,12 @@ import datetime
 from bson.objectid import ObjectId
 from flask import Flask, request, render_template, redirect, url_for, session, flash
 from flask_login import LoginManager, UserMixin, current_user, login_user, logout_user, login_required
-import bcrypt
+from flask_bcrypt import Bcrypt
 from functools import wraps
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+bcrypt = Bcrypt(app)
 
 ############ TO DO #############
 
@@ -111,7 +112,7 @@ def not_found(e):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     # show records from the last day
-    #today = datetime.datetime.today()
+    # today = datetime.datetime.today()
     # timedelta = datetime.timedelta(1) #one day old
     # return render_template('index.html', all_recipes=recipes.find({"date_added": {"$gt": today - timedelta}}))
 
@@ -156,7 +157,7 @@ def login():
 
     if request.method == 'POST':
         user = users.find_one({"email": request.form['username']})
-        if user and user['password'] == request.form['password']:
+        if user and bcrypt.check_password_hash(user['password'], request.form['password']):
             user_obj = User(username=user['email'],
                             role=user['role'], id=user['_id'])
             login_user(user_obj)
@@ -174,7 +175,7 @@ def login():
 # authenticated users can logout
 
 
-@app.route('/logout', methods=['GET', 'POST'])
+@ app.route('/logout', methods=['GET', 'POST'])
 def logout():
     logout_user()
     flash('You have successfully logged out.', 'success')
@@ -183,9 +184,9 @@ def logout():
 # authenticated users can view their account details
 
 
-@app.route('/my-account/<user_id>', methods=['GET', 'POST'])
-@login_required
-@roles_required('user', 'contributor', 'admin')
+@ app.route('/my-account/<user_id>', methods=['GET', 'POST'])
+@ login_required
+@ roles_required('user', 'contributor', 'admin')
 def my_account(user_id):
     edit_account = users.find_one({'_id': ObjectId(user_id)})
     if edit_account:
@@ -196,21 +197,21 @@ def my_account(user_id):
 # authenticated users can update their account details
 
 
-@app.route('/update-myaccount/<user_id>', methods=['GET', 'POST'])
-@login_required
-@roles_required('user', 'contributor', 'admin')
+@ app.route('/update-myaccount/<user_id>', methods=['GET', 'POST'])
+@ login_required
+@ roles_required('user', 'contributor', 'admin')
 def update_myaccount(user_id):
     if request.method == 'POST':
         form = request.form
 
-        password = request.form['password']
+        # password=request.form['password']
 
         users.update({'_id': ObjectId(user_id)},
                      {
             'first_name': form['first_name'],
             'last_name': form['last_name'],
             'email': form['email'],
-            'password': password,
+            # 'password': password,
             'role': form['role'],
             'date_added': form['date_added'],
             'date_modified': datetime.datetime.now()
@@ -223,21 +224,22 @@ def update_myaccount(user_id):
 
 ##########  Admin functionality -- User management ##########
 
-@app.route('/admin/users', methods=['GET', 'POST'])
-@login_required
-@roles_required('admin')
+@ app.route('/admin/users', methods=['GET', 'POST'])
+@ login_required
+@ roles_required('admin')
 def admin_users():
     return render_template('user-admin.html', all_roles=roles.find(), all_users=users.find())
 
 
-@app.route('/admin/add-user', methods=['GET', 'POST'])
-@login_required
-@roles_required('admin')
+@ app.route('/admin/add-user', methods=['GET', 'POST'])
+@ login_required
+@ roles_required('admin')
 def admin_add_user():
     if request.method == 'POST':
         form = request.form
 
         password = request.form['password']
+        pwd_hash = bcrypt.generate_password_hash(password)
 
         email = users.find_one({"email": request.form['email']})
         if email:
@@ -247,7 +249,7 @@ def admin_add_user():
             'first_name': form['first_name'],
             'last_name': form['last_name'],
             'email': form['email'],
-            'password': password,
+            'password': pwd_hash,
             'role': form['role'],
             'date_added': datetime.datetime.now(),
             'date_modified': datetime.datetime.now()
@@ -258,9 +260,9 @@ def admin_add_user():
     return render_template('user-admin.html', all_roles=roles.find(), all_users=users.find())
 
 
-@app.route('/admin/delete-user/<user_id>', methods=['GET', 'POST'])
-@login_required
-@roles_required('admin')
+@ app.route('/admin/delete-user/<user_id>', methods=['GET', 'POST'])
+@ login_required
+@ roles_required('admin')
 def admin_delete_user(user_id):
     delete_user = users.find_one({'_id': ObjectId(user_id)})
     if delete_user:
@@ -271,9 +273,9 @@ def admin_delete_user(user_id):
     return redirect(url_for('admin_users'))
 
 
-@app.route('/admin/edit-user/<user_id>', methods=['GET', 'POST'])
-@login_required
-@roles_required('admin')
+@ app.route('/admin/edit-user/<user_id>', methods=['GET', 'POST'])
+@ login_required
+@ roles_required('admin')
 def admin_edit_user(user_id):
     edit_user = users.find_one({'_id': ObjectId(user_id)})
     if edit_user:
@@ -282,9 +284,9 @@ def admin_edit_user(user_id):
     return redirect(url_for('admin_users'))
 
 
-@app.route('/admin/update-user/<user_id>', methods=['GET', 'POST'])
-@login_required
-@roles_required('admin')
+@ app.route('/admin/update-user/<user_id>', methods=['GET', 'POST'])
+@ login_required
+@ roles_required('admin')
 def admin_update_user(user_id):
     if request.method == 'POST':
         form = request.form
@@ -309,9 +311,9 @@ def admin_update_user(user_id):
 
 ##########  Admin Functionality - Recipe Categories ##########
 
-@app.route('/recipes/add-category', methods=['POST'])
-@login_required
-@roles_required('admin')
+@ app.route('/recipes/add-category', methods=['POST'])
+@ login_required
+@ roles_required('admin')
 def add_category():
     if request.method == 'POST':
         form = request.form
@@ -329,9 +331,9 @@ def add_category():
     return render_template('recipe-admin.html', all_categories=categories.find())
 
 
-@app.route('/recipes/delete_category/<category_id>', methods=['GET'])
-@login_required
-@roles_required('admin')
+@ app.route('/recipes/delete_category/<category_id>', methods=['GET'])
+@ login_required
+@ roles_required('admin')
 def delete_category(category_id):
     delete_category = categories.find_one({'_id': ObjectId(category_id)})
     if delete_category:
@@ -346,18 +348,18 @@ def delete_category(category_id):
 ##########  Recipes ##########
 
 # authenticated users can view al the recipes
-@app.route('/recipes', methods=['GET', 'POST'])
-@login_required
-@roles_required('admin', 'contributor', 'user')
+@ app.route('/recipes', methods=['GET', 'POST'])
+@ login_required
+@ roles_required('admin', 'contributor', 'user')
 def view_recipes():
     return render_template('recipes.html', all_recipes=recipes.find())
 
 # authenticated users can print a recipe
 
 
-@app.route('/recipes/print-recipe/<recipe_id>', methods=['GET', 'POST'])
-@login_required
-@roles_required('admin', 'contributor', 'user')
+@ app.route('/recipes/print-recipe/<recipe_id>', methods=['GET', 'POST'])
+@ login_required
+@ roles_required('admin', 'contributor', 'user')
 def print_recipe(recipe_id):
     print_recipe = recipes.find_one({'_id': ObjectId(recipe_id)})
     if print_recipe:
@@ -368,18 +370,18 @@ def print_recipe(recipe_id):
 # administrators users can manage all recipes
 
 
-@app.route('/recipes/admin', methods=['GET', 'POST'])
-@login_required
-@roles_required('admin')
+@ app.route('/recipes/admin', methods=['GET', 'POST'])
+@ login_required
+@ roles_required('admin')
 def admin_recipes():
     return render_template('recipe-admin.html', all_categories=categories.find(), all_recipes=recipes.find())
 
 # administrators and contributors can add new recipes
 
 
-@app.route('/recipes/add-recipe', methods=['GET', 'POST'])
-@login_required
-@roles_required('admin', 'contributor')
+@ app.route('/recipes/add-recipe', methods=['GET', 'POST'])
+@ login_required
+@ roles_required('admin', 'contributor')
 def add_recipe():
     if request.method == 'POST':
         form = request.form
@@ -401,9 +403,9 @@ def add_recipe():
     return render_template('new-recipe.html', all_categories=categories.find())
 
 
-@app.route('/recipes/edit-recipe/<recipe_id>', methods=['GET', 'POST'])
-@login_required
-@roles_required('admin')
+@ app.route('/recipes/edit-recipe/<recipe_id>', methods=['GET', 'POST'])
+@ login_required
+@ roles_required('admin')
 def edit_recipe(recipe_id):
     edit_recipe = recipes.find_one({'_id': ObjectId(recipe_id)})
     if edit_recipe:
@@ -412,9 +414,9 @@ def edit_recipe(recipe_id):
     return redirect(url_for('admin_recipes'))
 
 
-@app.route('/recipes/update-recipe/<recipe_id>', methods=['POST'])
-@login_required
-@roles_required('admin')
+@ app.route('/recipes/update-recipe/<recipe_id>', methods=['POST'])
+@ login_required
+@ roles_required('admin')
 def update_recipe(recipe_id):
     if request.method == 'POST':
         form = request.form
@@ -438,9 +440,9 @@ def update_recipe(recipe_id):
 # administrators can delete recipes
 
 
-@app.route('/recipes/delete-recipe/<recipe_id>', methods=['POST'])
-@login_required
-@roles_required('admin')
+@ app.route('/recipes/delete-recipe/<recipe_id>', methods=['POST'])
+@ login_required
+@ roles_required('admin')
 def delete_recipe(recipe_id):
     delete_recipe = recipes.find_one({'_id': ObjectId(recipe_id)})
     if delete_recipe:
